@@ -1,4 +1,4 @@
-const Request = require("./models/request.model");
+const Request = require("./models/request");
 const config = require("../utils/config");
 
 const extractRequestData = async (req, res, next) => {
