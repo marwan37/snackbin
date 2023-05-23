@@ -6,10 +6,24 @@ services:
       dockerfile: Dockerfile
     ports:
       - "3001:3001"
+    environment:
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME}
+      - DEV_PROXY=${DEV_PROXY}
+      - PROD_PROXY=${PROD_PROXY}
+      - MONGODB_URI=${MONGODB_URI}
   cron:
     build:
       context: .
       dockerfile: Dockerfile_cron
+      environment:
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME}
+      - MONGODB_URI=${MONGODB_URI}
+    env_file:
+      - .env
   db:
     image: postgres:14
     environment:
