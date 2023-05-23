@@ -8,8 +8,8 @@ app.use(cors());
 app.use(express.json());
 
 const mongoose = require("mongoose");
-const Request = require("./models/request.model");
-const GithubPayload = require("./models/githubPayload.model");
+const Request = require("./models/request");
+const GithubPayload = require("./models/github-payload");
 
 mongoose
   .connect(config.MONGODB_URI)
