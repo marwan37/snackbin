@@ -1,9 +1,8 @@
 const cron = require("node-cron");
-const mongoose = require("mongoose");
 const { Client } = require("pg");
 
 // MongoDB setup
-const Request = require("./models/request");
+const Request = require("./models/request.model");
 
 // PostgreSQL setup
 const client = new Client({
