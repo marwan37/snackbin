@@ -1,0 +1,18 @@
+# Ignore node modules - they should be installed inside the container
+node_modules
+
+# Ignore git directory
+.git
+
+# Ignore environment variables file
+.env
+
+# Ignore Nodemon config
+nodemon.json
+
+# Ignore logs
+*.log
+
+# Ignore OS generated files
+.DS_Store
+npm-debug.log
