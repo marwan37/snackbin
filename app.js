@@ -1,3 +1,4 @@
+const path = require("path");
 const express = require("express");
 const cors = require("cors");
 const config = require("./utils/config");
@@ -56,6 +57,13 @@ app.get("/bin/:id", async (req, res) => {
   }
 
   res.json(requests);
+});
+
+app.use(express.static("build"));
+
+// Catch-all handler -> return index.html
+app.get("*", (req, res) => {
+  res.sendFile(path.resolve(__dirname, "build", "index.html"));
 });
 
 const PORT = config.PORT || 3001;
