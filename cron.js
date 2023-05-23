@@ -20,7 +20,7 @@ In this case, all fields are set to asterisks, which means the job will run ever
 cron.schedule(
   "* * * * *",
   async () => {
-    console.log("Running a job at 01:00 at America/Pacific timezone");
+    console.log("Running a job at 01:00 at America/Los_Angeles timezone");
 
     // Fetches all requests from Mongo and sorts them by date
     const requests = await Request.find({}).sort({ createdAt: -1 });
