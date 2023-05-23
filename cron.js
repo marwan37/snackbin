@@ -55,6 +55,6 @@ cron.schedule(
   },
   {
     scheduled: true,
-    timezone: "America/Pacific"
+    timezone: "America/Los_Angeles"
   }
 );
