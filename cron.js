@@ -1,6 +1,7 @@
 const cron = require("node-cron");
 const { Client } = require("pg");
 const Request = require("./models/request");
+const Analytics = require("./models/analytics");
 
 // postgresql setup
 const client = new Client({
@@ -13,11 +14,11 @@ cron.schedule(
   async () => {
     console.log("Running a job at 01:00 at America/Los_Angeles timezone");
 
-    // Fetches all requests from Mongo and sorts them by date
     const requests = await Request.find({}).sort({ createdAt: -1 });
 
-    // Prepare an array of promises representing our queries
-    const queryPromises = requests.map(request => {
+    console.log("CRON", requests);
+
+    const queries = requests.map(request => {
       const { binId, headers, body, method, path, query, createdAt } = request;
 
       const text = `
@@ -37,57 +38,47 @@ cron.schedule(
       return client.query(text, values);
     });
 
+    console.log("CRON", queries);
+
     // Execute all INSERT queries in parallel
-    Promise.all(queryPromises)
-      .then(() => {
-        console.log("Data synced successfully.");
+    try {
+      await Promise.all(queries);
+      console.log("Data synced successfully.");
 
-        // ANALYTICS
-        const now = new Date();
-        const oneSecondAgo = new Date(now.getTime() - 1000);
+      // ANALYTICS
+      const now = new Date();
+      const oneMinuteAgo = new Date(now.getTime() - 60000); // 60000 milliseconds = 1 minute
 
-        // Count GET requests generated per second
-        client
-          .query(
-            `SELECT COUNT(*) FROM requests WHERE method = 'GET' AND created_at >= $1 AND created_at <= $2`,
-            [oneSecondAgo, now]
-          )
-          .then(result => {
-            console.log(`GET requests per second: ${result.rows[0].count}`);
-          })
-          .catch(error => {
-            console.error(`Failed to retrieve GET requests: ${error}`);
-          });
+      const getRequests = await client.query(
+        `SELECT COUNT(*) FROM requests WHERE method = 'GET' AND created_at >= $1 AND created_at <= $2`,
+        [oneMinuteAgo, now]
+      );
 
-        // Count POST requests generated per second
-        client
-          .query(
-            `SELECT COUNT(*) FROM requests WHERE method = 'POST' AND created_at >= $1 AND created_at <= $2`,
-            [oneSecondAgo, now]
-          )
-          .then(result => {
-            console.log(`POST requests per second: ${result.rows[0].count}`);
-          })
-          .catch(error => {
-            console.error(`Failed to retrieve POST requests: ${error}`);
-          });
+      const postRequests = await client.query(
+        `SELECT COUNT(*) FROM requests WHERE method = 'POST' AND created_at >= $1 AND created_at <= $2`,
+        [oneMinuteAgo, now]
+      );
 
-        // Count requests with non-empty body generated per second
-        client
-          .query(
-            `SELECT COUNT(*) FROM requests WHERE body IS NOT NULL AND created_at >= $1 AND created_at <= $2`,
-            [oneSecondAgo, now]
-          )
-          .then(result => {
-            console.log(`Requests with non-empty body per second: ${result.rows[0].count}`);
-          })
-          .catch(error => {
-            console.error(`Failed to retrieve requests with non-empty body: ${error}`);
-          });
-      })
-      .catch(error => {
-        console.error(`Failed to sync data: ${error}`);
+      const requestsWithBody = await client.query(
+        `SELECT COUNT(*) FROM requests WHERE body IS NOT NULL AND created_at >= $1 AND created_at <= $2`,
+        [oneMinuteAgo, now]
+      );
+
+      // Store analytics in MongoDB
+      const analytics = new Analytics({
+        getRequestsPerSecond: parseInt(getRequests.rows[0].count),
+        postRequestsPerSecond: parseInt(postRequests.rows[0].count),
+        requestsWithBodyPerSecond: parseInt(requestsWithBody.rows[0].count),
+        createdAt: now
       });
+
+      console.log("CRON", analytics);
+
+      await analytics.save();
+      console.log("Analytics saved successfully.");
+    } catch (error) {
+      console.error(`Failed to sync data: ${error}`);
+    }
   },
   {
     scheduled: true,
