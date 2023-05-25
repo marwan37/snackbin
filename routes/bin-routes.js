@@ -3,12 +3,19 @@ const binControllers = require("../controllers/bin-controllers");
 
 const router = express.Router();
 
-// Middleware: Route to handle requests to the bins & stores requests in the respective bin
-router.use("/bin/:id", binControllers.extractRequestData);
+// Save request to a bin
+router.get("/api/bin/:id", binControllers.getBinForId);
+
+// Delete a request from a bin
+router.delete("/api/bin/:id/:rid", binControllers.deleteRequest);
 
 // Route to view bin's content
-router.get("/bin/:id", binControllers.getBinForId);
+router.post("/bin/:id", binControllers.createRequest);
 
-router.post("/bin", binControllers.createRequest);
+// Route create new request bin
+router.post("api/bin/new", binControllers.createRequestBin);
+
+// Route to handle GitHub webhook payloads
+router.post("/bin/:id/github-webhook", binControllers.getGihubtPayload);
 
 module.exports = router;

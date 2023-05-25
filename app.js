@@ -3,6 +3,9 @@ const express = require("express");
 const cors = require("cors");
 const config = require("./utils/config");
 
+const binControllers = require("./routes/bin-controllers")(client);
+const binRoutes = require("./routes/bin-routes")(binControllers);
+
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -16,55 +19,49 @@ mongoose
   .then(() => console.log("connected to MongoDB"))
   .catch(error => console.log("error connecting to MongoDB:", error.message));
 
-// Route to handle GitHub webhook payloads
-app.post("/github-webhook", async (req, res) => {
-  let githubPayloadInstance = new GithubPayload({ payload: req.body });
+app.use("/", binRoutes);
 
-  await githubPayloadInstance.save();
-
-  res.send("GitHub payload received and saved");
+app.post("/payload", async (req, res) => {
+  let collection = await db.collection("test2");
+  await collection.insertOne(req.body);
+  res.send("ok");
 });
 
-// Middleware: Route to handle POST requests to the bins & stores requests in the respective bin
-app.post("/bin/:id", async (req, res) => {
-  let id = req.params.id;
-
-  let requestInfo = {
-    binId: id,
-    headers: req.headers,
-    body: req.body,
-    method: req.method,
-    path: req.path,
-    query: req.query
-  };
-
-  let request = new Request(requestInfo);
-  await request.save();
-
-  res.send("Request received");
+app.get("/requests", async (req, res) => {
+  let collection = await db.collection("test2");
+  let list = await collection.find().toArray();
+  console.log(list);
+  res.send(list);
 });
 
-// Route to view bin's content
-app.get("/bin/:id", async (req, res) => {
-  let id = req.params.id;
+// app.use(express.static("build"));
+// Catch-all handler -> return index.html
+// app.get("*", (req, res) => {
+//   res.sendFile(path.resolve(__dirname, "build", "index.html"));
+// });
 
-  let requests = await Request.find({ binId: id }).sort({ createdAt: -1 });
-  console.log("app.get", requests);
+// Function to close server on 'SIGTERM' and 'SIGINT' signals
+const shutdown = signal => async () => {
+  console.log(`${signal} signal received. Closing http server.`);
 
-  if (!requests.length) {
-    res.status(404).send("Bin not found");
-    return;
+  try {
+    await client.end();
+    console.log("PostgreSQL client disconnected.");
+  } catch (err) {
+    console.error("Error during disconnection:", err.stack);
   }
 
-  res.json(requests);
-});
-
-app.use(express.static("build"));
-
-// Catch-all handler -> return index.html
-app.get("*", (req, res) => {
-  res.sendFile(path.resolve(__dirname, "build", "index.html"));
-});
+  server.close(err => {
+    if (err) {
+      console.error(err);
+      process.exitCode = 1;
+    }
+    process.exit();
+  });
+};
 
 const PORT = config.PORT || 3001;
 app.listen(PORT, () => console.log(`Server started on port ${PORT}`));
+
+process.on("SIGTERM", shutdown("SIGTERM"));
+process.on("SIGINT", shutdown("SIGINT"));
