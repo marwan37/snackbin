@@ -1,28 +1,24 @@
 const Request = require("../models/request");
-const GithubPayload = require("../models/githubPayload");
-const { generateRandomString } = require("./utils/turtle");
-const { dbQuery } = require("../lib/pg-persistence");
+const GithubPayload = require("../models/github-payload");
+const randomizer = require("../utils/randomizer").generateRandomString;
+const { Client } = require("pg");
 
-const createRequestBin = client => async (req, res) => {
-  try {
-    let endpoint_url = req.params.id;
-
-    const result = await client.query(
-      "INSERT INTO bins (endpoint_url, created_at) VALUES ($1, NOW()) RETURNING id, endpoint_url, created_at",
-      [endpoint_url]
-    );
-
-    res.json(result.rows[0]);
-  } catch (err) {
-    console.error(err);
-    res
-      .status(500)
-      .json({ message: "An error occurred while inserting the bin into postgres db." });
-  }
-};
+// postgresql setup
+const client = new Client({
+  connectionString: "postgresql://marwan:bonbon@localhost:5432/requestbin"
+});
+client.connect();
 
 const extractRequestData = async (req, res) => {
   let id = req.params.id;
+
+  let binExists = await client.query("SELECT EXISTS (SELECT 1 FROM bins WHERE endpoint_url = $1)", [
+    id
+  ]);
+  if (!binExists.rows[0].exists) {
+    res.status(404).send("Bin not found");
+    return;
+  }
 
   let requestExists = await Request.exists({ binId: id });
 
@@ -49,18 +45,56 @@ const extractRequestData = async (req, res) => {
 const getBinForId = async (req, res) => {
   let id = req.params.id;
 
-  let requests = await Request.find({ binId: id }).sort({ createdAt: -1 });
-
-  if (!requests.length) {
+  let binExists = await client.query("SELECT EXISTS (SELECT 1 FROM bins WHERE endpoint_url = $1)", [
+    id
+  ]);
+  if (!binExists.rows[0].exists) {
     res.status(404).send("Bin not found");
     return;
   }
+  let requests = [];
+  let githubs = [];
+  try {
+    requests = await Request.find({ binId: id }).sort({ createdAt: -1 });
+  } catch (error) {
+    console.error("Error fetching requests:", error);
+  }
 
-  res.json(requests);
+  try {
+    githubs = await GithubPayload.find({ binId: id }).sort({ createdAt: -1 });
+    console.log(githubs);
+  } catch (error) {
+    console.error("Error fetching github payloads:", error);
+  }
+
+  res.json({ requests, githubs });
+};
+
+const createRequestBin = async (_req, res) => {
+  let endpointCandidate;
+
+  while (true) {
+    endpointCandidate = randomizer();
+    let binExists = await client.query(
+      "SELECT EXISTS (SELECT 1 FROM bins WHERE endpoint_url = $1)",
+      [endpointCandidate]
+    );
+    if (!binExists.rows[0].exists) break;
+  }
+
+  let created = await client.query("INSERT INTO bins (endpoint_url) VALUES ($1)", [
+    endpointCandidate
+  ]);
+  if (created.rowCount === 0) {
+    res.status(500).json({ message: "Internal server error" });
+  } else {
+    res.status(201).json({ endpoint_url: endpointCandidate });
+  }
 };
 
 const getGihubtPayload = async (req, res) => {
-  let githubPayloadInstance = new GithubPayload({ payload: req.body });
+  const id = req.params.id;
+  let githubPayloadInstance = new GithubPayload({ binId: id, payload: req.body });
 
   await githubPayloadInstance.save();
 
@@ -103,11 +137,11 @@ const deleteRequest = async (req, res) => {
   }
 };
 
-module.exports = client => {
+module.exports = {
   extractRequestData,
-    getGihubtPayload,
-    getBinForId,
-    createRequest,
-    deleteRequest,
-    createRequestBin(client);
+  getGihubtPayload,
+  getBinForId,
+  createRequest,
+  deleteRequest,
+  createRequestBin
 };

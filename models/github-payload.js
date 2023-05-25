@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 
 const GithubPayloadSchema = new mongoose.Schema(
   {
+    binId: String,
     payload: Object
   },
   { timestamps: true }
