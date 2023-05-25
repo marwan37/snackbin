@@ -1,25 +1,9 @@
 const Request = require("../models/request");
-const GithubPayload = require("../models/githubPayload");
-const { generateRandomString } = require("./utils/turtle");
-const { dbQuery } = require("../lib/pg-persistence");
-
-const createRequestBin = client => async (req, res) => {
-  try {
-    let endpoint_url = req.params.id;
-
-    const result = await client.query(
-      "INSERT INTO bins (endpoint_url, created_at) VALUES ($1, NOW()) RETURNING id, endpoint_url, created_at",
-      [endpoint_url]
-    );
-
-    res.json(result.rows[0]);
-  } catch (err) {
-    console.error(err);
-    res
-      .status(500)
-      .json({ message: "An error occurred while inserting the bin into postgres db." });
-  }
-};
+const GithubPayload = require("../models/github-payload");
+const { generateRandomString } = require("../utils/turtle");
+const pgClass = require("../lib/pg-persistence");
+const randomizer = require("../utils/turtle").generateRandomString
+const pg = new pgClass()
 
 const extractRequestData = async (req, res) => {
   let id = req.params.id;
@@ -46,16 +30,31 @@ const extractRequestData = async (req, res) => {
   res.send("Request received");
 };
 
+
+const createRequestBin = async (_req, res) => {
+  let endpointCandidate;
+
+  while (true) {
+    endpointCandidate = randomizer()
+    binExists = await pg.existsEndpoint(endpointCandidate);
+    if (!binExists) break;
+  }
+  let created = await pg.createRequestBin(endpointCandidate)
+  if (!created) {
+    res.status(500).json({ message: "Internal server error" });
+  } else {
+    res.status(201).json({ "endpoint_url": endpointCandidate })
+  }
+}
+
 const getBinForId = async (req, res) => {
   let id = req.params.id;
-
-  let requests = await Request.find({ binId: id }).sort({ createdAt: -1 });
-
-  if (!requests.length) {
+  let binExists = await pg.existsEndpoint(id);
+  if (!binExists) {
     res.status(404).send("Bin not found");
     return;
   }
-
+  let requests = await Request.find({ binId: id }).sort({ createdAt: -1 });
   res.json(requests);
 };
 
@@ -103,11 +102,11 @@ const deleteRequest = async (req, res) => {
   }
 };
 
-module.exports = client => {
+module.exports = {
   extractRequestData,
-    getGihubtPayload,
-    getBinForId,
-    createRequest,
-    deleteRequest,
-    createRequestBin(client);
+  getGihubtPayload,
+  getBinForId,
+  createRequest,
+  deleteRequest,
+  createRequestBin,
 };
