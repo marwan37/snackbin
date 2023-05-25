@@ -42,8 +42,6 @@ const extractRequestData = async (req, res) => {
   res.send("Request received");
 };
 
-const getBinForId = async (req, res) => {
-  let id = req.params.id;
 
   let binExists = await client.query("SELECT EXISTS (SELECT 1 FROM bins WHERE endpoint_url = $1)", [
     id
@@ -143,5 +141,5 @@ module.exports = {
   getBinForId,
   createRequest,
   deleteRequest,
-  createRequestBin
+  createRequestBin,
 };
