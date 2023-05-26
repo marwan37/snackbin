@@ -1,3 +1,4 @@
+const config = require("../utils/config");
 const Request = require("../models/request");
 const GithubPayload = require("../models/github-payload");
 const randomizer = require("../utils/randomizer").generateRandomString;
@@ -5,7 +6,7 @@ const { Client } = require("pg");
 
 // postgresql setup
 const client = new Client({
-  connectionString: "postgresql://marwan:bonbon@localhost:5432/requestbin"
+  connectionString: config.POSTGRES_URL
 });
 client.connect();
 
@@ -74,7 +75,7 @@ const getBinForId = async (req, res) => {
   res.json(data);
 };
 
-const createRequestBin = async (_req, res) => {
+const createRequestBin = async (req, res) => {
   let endpointCandidate;
 
   while (true) {

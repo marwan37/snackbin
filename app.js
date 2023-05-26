@@ -45,5 +45,6 @@ app.use("/", binRoutes);
 // app.get("*", (req, res) => {
 //   res.sendFile(path.resolve(__dirname, "build", "index.html"));
 // });
+
 const PORT = config.PORT || 3001;
 server.listen(PORT, () => console.log(`Server started on port ${PORT}`));
