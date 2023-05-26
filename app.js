@@ -6,6 +6,7 @@ const config = require("./utils/config");
 
 const binRoutes = require("./routes/bin-routes");
 const analyticsRoutes = require("./routes/analytics-routes");
+const queueRoutes = require("./routes/queue-routes")
 
 const app = express();
 const server = http.createServer(app);
@@ -37,6 +38,7 @@ mongoose
   .catch(error => console.log("error connecting to MongoDB:", error.message));
 
 app.use("/api/analytics", analyticsRoutes);
+app.use("/queue", queueRoutes);
 app.use("/", binRoutes);
 
 app.use(express.static("build"));
