@@ -1,17 +1,18 @@
 const Request = require("../models/request");
 const GithubPayload = require("../models/github-payload");
+const Queue = require("../models/queue");
 const randomizer = require("../utils/randomizer").generateRandomString;
 const { Client } = require("pg");
+const config = require('../utils/config')
 
 // postgresql setup
 const client = new Client({
-  connectionString: "postgresql://marwan:bonbon@localhost:5432/requestbin"
+  connectionString: config.POSTGRES_URL
 });
 client.connect();
 
 const extractRequestData = async (req, res) => {
   let id = req.params.id;
-
   let binExists = await client.query("SELECT EXISTS (SELECT 1 FROM bins WHERE endpoint_url = $1)", [
     id
   ]);
@@ -19,14 +20,11 @@ const extractRequestData = async (req, res) => {
     res.status(404).send("Bin not found");
     return;
   }
-
   let requestExists = await Request.exists({ binId: id });
-
   if (!requestExists) {
     res.status(404).send("Bin not found");
     return;
   }
-
   let requestInfo = {
     binId: id,
     headers: req.headers,
@@ -95,8 +93,14 @@ const createRequestBin = async (_req, res) => {
 const getGihubtPayload = async (req, res) => {
   const id = req.params.id;
   let githubPayloadInstance = new GithubPayload({ binId: id, payload: req.body });
-
-  await githubPayloadInstance.save();
+  
+  await githubPayloadInstance.save().then(savedDocument => {
+    let queueInstance = new Queue({mongoReference: savedDocument._id})
+    queueInstance.save();
+  })
+  .catch(error => {
+    console.log(error)
+  });;
 
   res.send("GitHub payload received and saved");
 };

@@ -4,6 +4,7 @@ const cors = require("cors");
 const config = require("./utils/config");
 
 const binRoutes = require("./routes/bin-routes");
+const queueRoutes = require("./routes/queue-routes")
 
 const app = express();
 app.use(cors());
@@ -16,6 +17,7 @@ mongoose
   .then(() => console.log("connected to MongoDB"))
   .catch(error => console.log("error connecting to MongoDB:", error.message));
 
+app.use("/queue", queueRoutes);
 app.use("/", binRoutes);
 
 app.use(express.static("build"));
