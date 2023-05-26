@@ -1,17 +1,31 @@
 const mongoose = require("mongoose");
 
-const queueSchema = new mongoose.Schema({
-  request: {
+// const queueSchema = new mongoose.Schema({
+//   request: {
+//     type: mongoose.Schema.Types.ObjectId,
+//     ref: "Request",
+//     required: true
+//   },
+//   enqueuedAt: {
+//     type: Date,
+//     default: Date.now
+//   }
+// });
+
+// const Queue = mongoose.model("Queue", queueSchema);
+
+// module.exports = Queue;
+
+const QueueSchema = new mongoose.Schema({
+  mongoReference: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "Request",
-    required: true
+    ref: 'GithubPayload'
   },
-  enqueuedAt: {
+  createdAt: {
     type: Date,
-    default: Date.now
-  }
+    default: Date.now,
+  },
 });
 
-const Queue = mongoose.model("Queue", queueSchema);
 
-module.exports = Queue;
+module.exports = mongoose.model("Queue", QueueSchema);
