@@ -3,6 +3,7 @@ const Request = require("../models/request");
 const GithubPayload = require("../models/github-payload");
 const randomizer = require("../utils/randomizer").generateRandomString;
 const { Client } = require("pg");
+const BasecampPayload = require("../models/basecamp");
 
 // postgresql setup
 const client = new Client({
@@ -63,7 +64,6 @@ const getBinForId = async (req, res) => {
 
   try {
     githubs = await GithubPayload.find({ binId: id }).sort({ createdAt: -1 });
-    console.log(githubs);
   } catch (error) {
     console.error("Error fetching github payloads:", error);
   }
@@ -97,13 +97,31 @@ const createRequestBin = async (req, res) => {
   }
 };
 
-const getGihubtPayload = async (req, res) => {
+const getGithubPayload = async (req, res) => {
   const id = req.params.id;
   let githubPayloadInstance = new GithubPayload({ binId: id, payload: req.body });
 
   await githubPayloadInstance.save();
 
   res.send("GitHub payload received and saved");
+};
+
+const createBasecampPayload = async (req, res) => {
+  const id = req.params.id;
+  let payload = new BasecampPayload({ binId: id, payload: req.body });
+
+  await payload.save();
+
+  let basecamps = [];
+  try {
+    basecamps = await BasecampPayload.find({ binId: id }).sort({ createdAt: -1 });
+  } catch (error) {
+    console.error("Error fetching basecamp payloads:", error);
+  }
+
+  req.io.emit("update", basecamps);
+
+  res.send("Basecamp payload received and saved");
 };
 
 const createRequest = async (req, res) => {
@@ -129,6 +147,30 @@ const createRequest = async (req, res) => {
   res.send(request);
 };
 
+const getBasecampPayloads = async (req, res) => {
+  const id = req.params.id;
+
+  console.log("BasecampPayloadID", req.params.id);
+
+  let binExists = await client.query("SELECT EXISTS (SELECT 1 FROM bins WHERE endpoint_url = $1)", [
+    id
+  ]);
+  if (!binExists.rows[0].exists) {
+    res.status(404).send("Bin not found");
+    return;
+  }
+  let basecamps = [];
+  try {
+    basecamps = await BasecampPayload.find({ binId: id }).sort({ createdAt: -1 });
+  } catch (error) {
+    console.error("Error fetching basecamp payloads:", error);
+  }
+
+  req.io.emit("update", basecamps);
+
+  res.json(basecamps);
+};
+
 const deleteRequest = async (req, res) => {
   const reqId = req.params.rid;
 
@@ -148,11 +190,53 @@ const deleteRequest = async (req, res) => {
   }
 };
 
+const deleteGithubRequest = async (req, res) => {
+  const reqId = req.params.rid;
+
+  try {
+    let request = await GithubPayload.findById(reqId);
+
+    if (!request) {
+      return res.status(404).json({ message: "Request not found" });
+    }
+
+    await GithubPayload.deleteOne({ _id: reqId });
+    req.io.emit("deleted_request", request);
+    res.status(200).json({ message: "Deleted request" });
+  } catch (err) {
+    console.error("Error occurred while deleting request", err);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+const deleteBasecampRequest = async (req, res) => {
+  const reqId = req.params.rid;
+
+  try {
+    let request = await BasecampPayload.findById(reqId);
+
+    if (!request) {
+      return res.status(404).json({ message: "Request not found" });
+    }
+
+    await BasecampPayload.deleteOne({ _id: reqId });
+    req.io.emit("deleted_request", request);
+    res.status(200).json({ message: "Deleted request" });
+  } catch (err) {
+    console.error("Error occurred while deleting request", err);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
 module.exports = {
   extractRequestData,
-  getGihubtPayload,
+  getGithubPayload,
   getBinForId,
   createRequest,
   deleteRequest,
-  createRequestBin
+  deleteBasecampRequest,
+  deleteGithubRequest,
+  createRequestBin,
+  createBasecampPayload,
+  getBasecampPayloads
 };

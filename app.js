@@ -39,12 +39,12 @@ mongoose
 app.use("/api/analytics", analyticsRoutes);
 app.use("/", binRoutes);
 
-// app.use(express.static("build"));
+app.use(express.static("build"));
 
 // Catch-all handler -> return index.html
-// app.get("*", (req, res) => {
-//   res.sendFile(path.resolve(__dirname, "build", "index.html"));
-// });
+app.get("*", (req, res) => {
+  res.sendFile(path.resolve(__dirname, "build", "index.html"));
+});
 
 const PORT = config.PORT || 3001;
 server.listen(PORT, () => console.log(`Server started on port ${PORT}`));

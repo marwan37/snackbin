@@ -1,13 +1,14 @@
 {
   "files": {
-    "main.js": "/static/js/main.b03d06c1.js",
+    "main.js": "/static/js/main.246c458c.js",
     "static/media/snackbin.png": "/static/media/snackbin.c4c6f0354c67f9561622.png",
     "static/media/donut404.png": "/static/media/donut404.48a59f770b38e1d160c2.png",
     "static/media/github-banner.png": "/static/media/github-banner.5994b25b696bbc93b5d8.png",
+    "static/media/basecamp.png": "/static/media/basecamp.b7ae10cdb7b41b96e1d6.png",
     "index.html": "/index.html",
-    "main.b03d06c1.js.map": "/static/js/main.b03d06c1.js.map"
+    "main.246c458c.js.map": "/static/js/main.246c458c.js.map"
   },
   "entrypoints": [
-    "static/js/main.b03d06c1.js"
+    "static/js/main.246c458c.js"
   ]
 }
