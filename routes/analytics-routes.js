@@ -12,6 +12,7 @@ router.post("/", async (req, res) => {
     const oneMinuteAgo = new Date(now.getTime() - 60000); // 60000 milliseconds = 1 minute
 
     try {
+      // $gte/$lte = greater/lesser than or equal
       const getRequests = await Request.countDocuments({
         createdAt: {
           $gte: oneMinuteAgo,
@@ -27,6 +28,7 @@ router.post("/", async (req, res) => {
         }
       });
 
+      // $ne (means not equal, i.e. non-null body)
       const requestsWithBody = await Request.countDocuments({
         body: { $ne: null },
         createdAt: {
