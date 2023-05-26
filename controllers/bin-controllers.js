@@ -1,3 +1,4 @@
+const config = require("../utils/config");
 const Request = require("../models/request");
 const GithubPayload = require("../models/github-payload");
 const Queue = require("../models/queue");
@@ -65,10 +66,14 @@ const getBinForId = async (req, res) => {
     console.error("Error fetching github payloads:", error);
   }
 
-  res.json({ requests, githubs });
+  const data = { requests, githubs };
+
+  req.io.emit("update", data);
+
+  res.json(data);
 };
 
-const createRequestBin = async (_req, res) => {
+const createRequestBin = async (req, res) => {
   let endpointCandidate;
 
   while (true) {
@@ -120,6 +125,11 @@ const createRequest = async (req, res) => {
   let request = new Request(requestInfo);
   await request.save();
 
+  const requests = await Request.find({ binId: id }).sort({ createdAt: -1 });
+  const githubs = await GithubPayload.find({ binId: id }).sort({ createdAt: -1 });
+
+  req.io.emit("update", { requests, githubs });
+
   res.send(request);
 };
 
@@ -134,6 +144,7 @@ const deleteRequest = async (req, res) => {
     }
 
     await Request.deleteOne({ _id: reqId });
+    req.io.emit("deleted_request", request);
     res.status(200).json({ message: "Deleted request" });
   } catch (err) {
     console.error("Error occurred while deleting request", err);
